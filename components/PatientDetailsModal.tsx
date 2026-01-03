@@ -60,7 +60,7 @@ export const PatientDetailsModal = ({
 
   const formatDate = (dateString: string) => {
     try {
-      return formatDateTime(new Date(dateString)).date;
+      return formatDateTime(new Date(dateString)).dateOnly;
     } catch {
       return dateString;
     }

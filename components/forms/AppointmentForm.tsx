@@ -36,7 +36,7 @@ import { Form } from "../ui/form";
 interface Appointment {
   id: string;
   primaryPhysician: string;
-  schedule: Date;
+  schedule: Date | string;
   reason: string;
   note?: string;
   cancellationReason?: string;

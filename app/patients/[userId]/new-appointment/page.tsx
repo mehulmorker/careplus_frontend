@@ -3,18 +3,18 @@ import { AppointmentForm } from "@/components/forms/AppointmentForm";
 import { GET_PATIENT_BY_USER_ID_QUERY } from "@/lib/graphql/queries/patient.queries";
 import { getClient } from "@/lib/apollo/client";
 
-interface PageProps {
-  params: {
-    userId: string;
-  };
-}
-
 /**
  * New Appointment Page
  *
  * Server component that fetches patient data and renders the appointment form.
  */
-const AppointmentPage = async ({ params: { userId } }: PageProps) => {
+const AppointmentPage = async ({
+  params,
+}: {
+  params: Promise<{ userId: string }>;
+}) => {
+  const { userId } = await params;
+
   // Fetch patient data
   const client = getClient();
   const { data } = await client.query({

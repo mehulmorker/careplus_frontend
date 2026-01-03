@@ -29,7 +29,7 @@ export default async function RegisterPage({
 
           <RegisterFormWrapper userId={userId} />
 
-          <p className="copyright py-12">© 2024 CarePulse</p>
+          <p className="copyright py-12">© {new Date().getFullYear()} CarePulse</p>
         </div>
       </section>
 

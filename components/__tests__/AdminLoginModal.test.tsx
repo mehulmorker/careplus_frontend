@@ -67,12 +67,14 @@ vi.mock("next/image", () => ({
 }));
 
 describe("AdminLoginModal", () => {
+  const mockOnClose = vi.fn();
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("should render admin login modal", () => {
-    render(<AdminLoginModal />);
+    render(<AdminLoginModal onClose={mockOnClose} />);
 
     expect(screen.getByText("Admin Login")).toBeInTheDocument();
     expect(
@@ -85,21 +87,21 @@ describe("AdminLoginModal", () => {
   });
 
   it("should render login and cancel buttons", () => {
-    render(<AdminLoginModal />);
+    render(<AdminLoginModal onClose={mockOnClose} />);
 
     expect(screen.getByRole("button", { name: /login/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /cancel/i })).toBeInTheDocument();
   });
 
   it("should render form inputs", () => {
-    render(<AdminLoginModal />);
+    render(<AdminLoginModal onClose={mockOnClose} />);
 
     expect(screen.getByTestId("input-email")).toBeInTheDocument();
     expect(screen.getByTestId("input-password")).toBeInTheDocument();
   });
 
   it("should render submit button with correct text", () => {
-    render(<AdminLoginModal />);
+    render(<AdminLoginModal onClose={mockOnClose} />);
 
     const submitButton = screen.getByRole("button", { name: /login/i });
     expect(submitButton).toBeInTheDocument();
@@ -107,7 +109,7 @@ describe("AdminLoginModal", () => {
   });
 
   it("should render error container (initially empty)", () => {
-    render(<AdminLoginModal />);
+    render(<AdminLoginModal onClose={mockOnClose} />);
 
     // Error container exists but is empty initially
     const errorContainer = screen.queryByText(/invalid email or password/i);
@@ -115,30 +117,41 @@ describe("AdminLoginModal", () => {
   });
 
   it("should render cancel button", () => {
-    render(<AdminLoginModal />);
+    render(<AdminLoginModal onClose={mockOnClose} />);
 
     const cancelButton = screen.getByRole("button", { name: /cancel/i });
     expect(cancelButton).toBeInTheDocument();
   });
 
   it("should render submit button with loading state text capability", () => {
-    render(<AdminLoginModal />);
+    render(<AdminLoginModal onClose={mockOnClose} />);
 
     const submitButton = screen.getByRole("button", { name: /login/i });
     expect(submitButton).toBeInTheDocument();
     // Button can show "Logging in..." when isLoading is true
   });
 
-  it("should close modal when cancel button is clicked", async () => {
+  it("should call onClose when cancel button is clicked", async () => {
     const user = userEvent.setup();
-    render(<AdminLoginModal />);
+    render(<AdminLoginModal onClose={mockOnClose} />);
 
     const cancelButton = screen.getByRole("button", { name: /cancel/i });
     await user.click(cancelButton);
 
     await waitFor(() => {
-      expect(mockRouter.push).toHaveBeenCalledWith("/");
+      expect(mockOnClose).toHaveBeenCalled();
+    });
+  });
+
+  it("should call onClose when close button (X) is clicked", async () => {
+    const user = userEvent.setup();
+    render(<AdminLoginModal onClose={mockOnClose} />);
+
+    const closeButton = screen.getByRole("button", { name: /close modal/i });
+    await user.click(closeButton);
+
+    await waitFor(() => {
+      expect(mockOnClose).toHaveBeenCalled();
     });
   });
 });
-

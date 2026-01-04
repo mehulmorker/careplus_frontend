@@ -1,24 +1,13 @@
 import Image from "next/image";
-import Link from "next/link";
 
-import PatientForm from "@/components/forms/PatientForm";
-import { AdminLoginModal } from "@/components/AdminLoginModal";
+import { PatientForm } from "@/components/forms/PatientForm";
 import { HomePageRedirect } from "@/components/HomePageRedirect";
+import { AdminButton } from "@/components/AdminButton";
 
-interface HomeProps {
-  searchParams?: Promise<{
-    admin?: string;
-  }>;
-}
-
-export default async function Home({ searchParams }: HomeProps) {
-  const params = await searchParams;
-  const isAdmin = params?.admin === "true";
-
+export default function Home() {
   return (
     <div className="flex h-screen max-h-screen">
       <HomePageRedirect />
-      {isAdmin && <AdminLoginModal />}
 
       <section className="remove-scrollbar container my-auto">
         <div className="sub-container max-w-[496px]">
@@ -36,9 +25,7 @@ export default async function Home({ searchParams }: HomeProps) {
             <p className="justify-items-end text-dark-600 xl:text-left">
               © 2024 CarePulse
             </p>
-            <Link href="/?admin=true" className="text-green-500">
-              Admin
-            </Link>
+            <AdminButton />
           </div>
         </div>
       </section>

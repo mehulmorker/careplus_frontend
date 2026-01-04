@@ -17,28 +17,34 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/hooks/useAuth";
-import { LoginFormValidation, LoginFormValues } from "@/lib/validations/user.validation";
+import {
+  LoginFormValidation,
+  LoginFormValues,
+} from "@/lib/validations/user.validation";
 import CustomFormField, { FormFieldType } from "./CustomFormField";
 import { Form } from "./ui/form";
+
+interface AdminLoginModalProps {
+  onClose: () => void;
+}
 
 /**
  * Admin Login Modal Component
  *
- * Modal that appears when user clicks "Admin" link on homepage.
+ * Modal that appears when user clicks "Admin" button on homepage.
  * Allows admin users to login with email and password.
  * After successful login, redirects to admin dashboard.
- * 
+ *
  * UX Improvements:
  * - Modal stays open on error (doesn't close)
  * - Clear error messages
  * - Loading state prevents multiple submissions
  */
-export const AdminLoginModal = () => {
+export const AdminLoginModal = ({ onClose }: AdminLoginModalProps) => {
   const router = useRouter();
   const { login } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isOpen, setIsOpen] = useState(true);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(LoginFormValidation),
@@ -48,23 +54,15 @@ export const AdminLoginModal = () => {
     },
   });
 
-  const closeModal = () => {
-    setIsOpen(false);
-    router.push("/");
-  };
-
   const handleOpenChange = (open: boolean) => {
-    // Prevent closing when there's an error or loading
-    // Only allow closing via explicit close button or cancel
+    // Prevent closing when loading
+    if (!open && isLoading) {
+      return;
+    }
+    // Allow closing - clear error and call onClose
     if (!open) {
-      if (isLoading || error) {
-        // Prevent closing - keep modal open by setting it back to true
-        setIsOpen(true);
-        return;
-      }
-      closeModal();
-    } else {
-      setIsOpen(open);
+      setError(null);
+      onClose();
     }
   };
 
@@ -78,8 +76,7 @@ export const AdminLoginModal = () => {
       if (result.success && result.user) {
         // Check if user is admin
         if (result.user.role === "ADMIN") {
-          // Success - redirect to admin dashboard
-          setIsLoading(false);
+          // Success - redirect to admin dashboard (keep loading state during redirect)
           router.push("/admin");
         } else {
           // Not an admin user
@@ -88,25 +85,30 @@ export const AdminLoginModal = () => {
         }
       } else {
         // Login failed - show error but keep modal open
-        setError(result.errors?.[0]?.message || "Invalid email or password. Please try again.");
+        setError(
+          result.errors?.[0]?.message ||
+            "Invalid email or password. Please try again."
+        );
         setIsLoading(false);
       }
     } catch (err: any) {
       console.error("Login error:", err);
       // Network or unexpected error - show error but keep modal open
-      setError("An unexpected error occurred. Please check your connection and try again.");
+      setError(
+        "An unexpected error occurred. Please check your connection and try again."
+      );
       setIsLoading(false);
     }
   };
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={handleOpenChange}>
+    <AlertDialog open={true} onOpenChange={handleOpenChange}>
       <AlertDialogContent className="shad-alert-dialog max-w-md">
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-start justify-between">
             Admin Login
             <button
-              onClick={closeModal}
+              onClick={onClose}
               className="cursor-pointer"
               type="button"
               disabled={isLoading}
@@ -121,7 +123,8 @@ export const AdminLoginModal = () => {
             </button>
           </AlertDialogTitle>
           <AlertDialogDescription>
-            Please login with your admin credentials to access the admin dashboard.
+            Please login with your admin credentials to access the admin
+            dashboard.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -158,7 +161,7 @@ export const AdminLoginModal = () => {
                 type="button"
                 onClick={(e) => {
                   e.preventDefault();
-                  closeModal();
+                  onClose();
                 }}
                 disabled={isLoading}
                 className="shad-gray-btn w-full"
@@ -179,4 +182,3 @@ export const AdminLoginModal = () => {
     </AlertDialog>
   );
 };
-

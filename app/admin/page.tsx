@@ -24,9 +24,9 @@ const AdminPage = async () => {
   // Get token from cookies (server-side)
   const token = await getServerToken();
 
-  // If no token, redirect to home with admin modal
+  // If no token, redirect to home
   if (!token) {
-    redirect("/?admin=true");
+    redirect("/");
   }
 
   // Create client with token
@@ -43,7 +43,7 @@ const AdminPage = async () => {
 
     // If not authenticated or not admin, redirect
     if (!user || user.role !== "ADMIN") {
-      redirect("/?admin=true");
+      redirect("/");
     }
 
     // Fetch appointments and statistics in parallel
@@ -102,7 +102,7 @@ const AdminPage = async () => {
   } catch (error) {
     // If any error occurs (auth failure, network error, etc.), redirect to login
     console.error("Admin page error:", error);
-    redirect("/?admin=true");
+    redirect("/");
   }
 };
 

@@ -58,32 +58,53 @@ export const useAuth = () => {
   const [logoutMutation] = useMutation(LOGOUT_MUTATION);
 
   /**
-   * Save token to localStorage and cookies
-   * Cookies are needed for server-side authentication
+   * Save token to localStorage and set cookie via API route
+   * API route ensures cookie is properly set with Secure flag for production
    */
-  const saveToken = useCallback((token: string) => {
+  const saveToken = useCallback(async (token: string) => {
     if (typeof window !== "undefined") {
       // Save to localStorage for client-side access
       localStorage.setItem(TOKEN_KEY, token);
       
-      // Save to cookie for server-side access
-      // Set cookie with 7 days expiration (matching JWT expiration)
-      const expires = new Date();
-      expires.setTime(expires.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
-      document.cookie = `${TOKEN_KEY}=${token}; expires=${expires.toUTCString()}; path=/; SameSite=Lax`;
+      // Save to cookie via API route for server-side access
+      // This ensures proper Secure flag is set in production (HTTPS)
+      try {
+        await fetch("/api/auth/set-cookie", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ token }),
+        });
+      } catch (error) {
+        console.error("Error setting cookie via API:", error);
+        // Fallback to document.cookie (might not work in production)
+        const expires = new Date();
+        expires.setTime(expires.getTime() + 7 * 24 * 60 * 60 * 1000);
+        const secure = window.location.protocol === "https:" ? "; Secure" : "";
+        document.cookie = `${TOKEN_KEY}=${token}; expires=${expires.toUTCString()}; path=/; SameSite=Lax${secure}`;
+      }
     }
   }, []);
 
   /**
-   * Remove token from localStorage and cookies, clear Apollo cache
+   * Remove token from localStorage and clear cookie via API route
    */
-  const removeToken = useCallback(() => {
+  const removeToken = useCallback(async () => {
     if (typeof window !== "undefined") {
       // Remove from localStorage
       localStorage.removeItem(TOKEN_KEY);
       
-      // Remove cookie by setting expiration to past date
-      document.cookie = `${TOKEN_KEY}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+      // Clear cookie via API route
+      try {
+        await fetch("/api/auth/clear-cookie", {
+          method: "POST",
+        });
+      } catch (error) {
+        console.error("Error clearing cookie via API:", error);
+        // Fallback to document.cookie
+        document.cookie = `${TOKEN_KEY}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+      }
     }
   }, []);
 
@@ -108,7 +129,7 @@ export const useAuth = () => {
         });
 
         if (data?.register.success && data.register.token) {
-          saveToken(data.register.token);
+          await saveToken(data.register.token);
           await refetchMe();
           return { success: true, user: data.register.user };
         }
@@ -139,7 +160,7 @@ export const useAuth = () => {
         });
 
         if (data?.login.success && data.login.token) {
-          saveToken(data.login.token);
+          await saveToken(data.login.token);
           await refetchMe();
           return { success: true, user: data.login.user };
         }
@@ -188,7 +209,7 @@ export const useAuth = () => {
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
-      removeToken();
+      await removeToken();
       await client.clearStore();
       router.push("/");
     }
@@ -216,4 +237,3 @@ export const useAuth = () => {
 };
 
 export default useAuth;
-

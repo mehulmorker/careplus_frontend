@@ -5,15 +5,15 @@ Next.js 15 frontend application for the CarePulse Healthcare Management System.
 ## 📸 Screenshots
 
 <div align="center">
-  <img src="/assets/images/1.png" alt="CarePulse Homepage" width="800"/>
+  <img src="public/assets/images/1.png" alt="CarePulse Homepage" width="800"/>
   <br/><br/>
-  <img src="/assets/images/2.png" alt="Patient Registration" width="800"/>
+  <img src="public/assets/images/2.png" alt="Patient Registration" width="800"/>
   <br/><br/>
-  <img src="/assets/images/3.png" alt="Appointment Booking" width="800"/>
+  <img src="public/assets/images/3.png" alt="Appointment Booking" width="800"/>
   <br/><br/>
-  <img src="/assets/images/4.png" alt="Admin Dashboard" width="800"/>
+  <img src="public/assets/images/4.png" alt="Admin Dashboard" width="800"/>
   <br/><br/>
-  <img src="/assets/images/5.png" alt="Appointment Management" width="800"/>
+  <img src="public/assets/images/5.png" alt="Appointment Management" width="800"/>
 </div>
 
 ---

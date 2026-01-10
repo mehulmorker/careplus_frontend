@@ -5,7 +5,7 @@ import type { NextRequest } from "next/server";
  * Next.js Middleware
  * 
  * Protects admin routes at the edge before the page loads.
- * This provides better security and UX than client-side checks.
+ * Cookies are now same-domain (via API proxy), so middleware can check them.
  */
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -13,6 +13,7 @@ export function middleware(request: NextRequest) {
   // Protect admin routes
   if (pathname.startsWith("/admin")) {
     // Check for authentication cookies
+    // Cookies are now same-domain thanks to API proxy route
     const accessToken = request.cookies.get("accessToken")?.value;
     const refreshToken = request.cookies.get("refreshToken")?.value;
 

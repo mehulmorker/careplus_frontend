@@ -29,9 +29,10 @@ const errorLink = onError(({ graphQLErrors, networkError, operation }) => {
   }
 });
 
-// HTTP link
+// HTTP link - use proxy route for same-domain cookies
+// Proxy route handles forwarding to backend and setting cookies on frontend domain
 const httpLink = new HttpLink({
-  uri: process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/graphql",
+  uri: "/api/graphql", // Use proxy route instead of direct backend
   credentials: "include", // Include cookies automatically
 });
 
@@ -62,14 +63,16 @@ export const createApolloClient = () => {
 };
 
 // Server-side Apollo Client (for Next.js App Router server components)
-// Cookies must be explicitly forwarded from Next.js request
+// For server-side, we still call backend directly since cookies are already in the request
+// The proxy route is mainly for client-side requests to make cookies same-domain
 export function getClient(cookieHeader?: string) {
-  // Create HTTP link for server-side with cookie forwarding
+  // Create HTTP link for server-side - call backend directly
+  // Cookies from browser request are forwarded via cookieHeader
   const serverHttpLink = new HttpLink({
     uri: process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/graphql",
     credentials: "include",
     fetch: (uri, options) => {
-      // Forward cookies from Next.js request to GraphQL backend
+      // Forward cookies from Next.js request to backend
       return fetch(uri, {
         ...options,
         headers: {

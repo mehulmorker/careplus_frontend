@@ -4,70 +4,102 @@ import { NextRequest, NextResponse } from "next/server";
  * GraphQL API Proxy Route
  * 
  * Proxies GraphQL requests from frontend to backend.
- * This allows cookies to be set on the same domain (frontend),
- * making them accessible to Next.js middleware.
- * 
- * Benefits:
- * - Cookies are same-domain (accessible in middleware)
- * - Better security (edge protection)
- * - Better UX (no flash of content before redirect)
+ * Rewrites cookies to be same-domain for middleware access.
  */
 export async function POST(request: NextRequest) {
   try {
-    // Get request body
     const body = await request.json();
-    
-    // Get cookies from incoming request
     const cookieHeader = request.headers.get("cookie") || "";
-    
-    // Get backend URL from environment variable
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/graphql";
     
-    // Forward request to backend
     const response = await fetch(backendUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        // Forward cookies to backend
         ...(cookieHeader && { Cookie: cookieHeader }),
       },
       body: JSON.stringify(body),
-      // Important: Don't follow redirects automatically
       redirect: "manual",
     });
     
-    // Get response data
     const data = await response.json();
+    const setCookieHeaders: string[] = [];
     
-    // Get Set-Cookie headers from backend response
-    const setCookieHeaders = response.headers.getSetCookie();
+    if (typeof (response.headers as any).getSetCookie === "function") {
+      setCookieHeaders.push(...(response.headers as any).getSetCookie());
+    } else {
+      response.headers.forEach((value, key) => {
+        if (key.toLowerCase() === "set-cookie") {
+          if (Array.isArray(value)) {
+            setCookieHeaders.push(...value);
+          } else {
+            setCookieHeaders.push(value);
+          }
+        }
+      });
+    }
     
-    // Create response with data
     const nextResponse = NextResponse.json(data, {
       status: response.status,
     });
     
-    // Forward Set-Cookie headers from backend to frontend
-    // Rewrite cookies to be for frontend domain (remove domain attribute)
     if (setCookieHeaders && setCookieHeaders.length > 0) {
       setCookieHeaders.forEach((cookie) => {
-        // Parse cookie string
         const parts = cookie.split(";").map((p) => p.trim());
         const [nameValue] = parts;
-        const [name, ...valueParts] = nameValue.split("=");
-        const value = valueParts.join("=");
         
-        // Extract attributes (skip domain)
+        const equalIndex = nameValue.indexOf("=");
+        if (equalIndex === -1) {
+          return;
+        }
+        
+        const name = nameValue.substring(0, equalIndex);
+        const value = nameValue.substring(equalIndex + 1);
+        
         const attributes: string[] = [];
+        let expiresDate: Date | null = null;
+        let maxAgeValue: number | null = null;
+        
         parts.slice(1).forEach((part) => {
           const lowerPart = part.toLowerCase();
-          // Skip domain attribute - browser will use current domain
-          if (!lowerPart.startsWith("domain=")) {
-            attributes.push(part);
+          
+          if (lowerPart.startsWith("domain=")) {
+            return;
           }
+          
+          if (lowerPart.startsWith("expires=")) {
+            const expiresValue = part.substring(8);
+            expiresDate = new Date(expiresValue);
+            attributes.push(part);
+            return;
+          }
+          
+          if (lowerPart.startsWith("max-age=")) {
+            maxAgeValue = parseInt(part.substring(8), 10);
+            if (maxAgeValue > 0) {
+              attributes.push(part);
+            }
+            return;
+          }
+          
+          attributes.push(part);
         });
         
-        // Reconstruct cookie without domain
+        if ((!maxAgeValue || maxAgeValue === 0) && expiresDate !== null) {
+          try {
+            const expiresTime = (expiresDate as Date).getTime();
+            if (!isNaN(expiresTime)) {
+              const now = new Date();
+              const secondsUntilExpiry = Math.max(0, Math.floor((expiresTime - now.getTime()) / 1000));
+              if (secondsUntilExpiry > 0) {
+                attributes.push(`Max-Age=${secondsUntilExpiry}`);
+              }
+            }
+          } catch (error) {
+            // Invalid date, skip Max-Age recalculation
+          }
+        }
+        
         const cookieString = attributes.length > 0
           ? `${name}=${value}; ${attributes.join("; ")}`
           : `${name}=${value}`;
@@ -93,7 +125,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Handle OPTIONS for CORS preflight
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,

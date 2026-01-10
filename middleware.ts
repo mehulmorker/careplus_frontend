@@ -6,6 +6,9 @@ import type { NextRequest } from "next/server";
  * 
  * Protects admin routes at the edge before the page loads.
  * Cookies are now same-domain (via API proxy), so middleware can check them.
+ * 
+ * Note: Allows request to proceed even without cookies to avoid race conditions
+ * after login. Server component will handle authentication and redirect if needed.
  */
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -17,13 +20,10 @@ export function middleware(request: NextRequest) {
     const accessToken = request.cookies.get("accessToken")?.value;
     const refreshToken = request.cookies.get("refreshToken")?.value;
 
-    // If no tokens, redirect to home
-    if (!accessToken && !refreshToken) {
-      return NextResponse.redirect(new URL("/", request.url));
-    }
-
-    // Tokens exist - let the request proceed
-    // Server component will verify the token is valid and user is admin
+    // If tokens exist, let request proceed
+    // If no tokens, still allow request to proceed - server component will handle redirect
+    // This avoids race condition where cookies aren't available immediately after login
+    // Server component will validate via GraphQL and redirect if not authenticated
   }
 
   return NextResponse.next();

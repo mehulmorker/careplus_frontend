@@ -78,9 +78,9 @@ export const AdminLoginModal = ({ onClose }: AdminLoginModalProps) => {
         // Check if user is admin
         if (result.user.role === "ADMIN") {
           // Wait for cookies to be set by browser before redirecting
-          // Cookies are now same-domain (via API proxy), so they should be available immediately
-          // Small delay ensures browser has processed Set-Cookie headers
-          await new Promise((resolve) => setTimeout(resolve, 200));
+          // Cookies are now same-domain (via API proxy), but browser needs time to process them
+          // Increased delay to ensure cookies are available when middleware runs
+          await new Promise((resolve) => setTimeout(resolve, 500));
 
           // Use window.location.href for full page reload
           // This ensures middleware runs and can check cookies properly

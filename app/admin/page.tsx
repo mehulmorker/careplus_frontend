@@ -21,19 +21,14 @@ import { getClient } from "@/lib/apollo/client";
  * Requires admin authentication - checks on server-side before rendering.
  */
 const AdminPage = async () => {
-  // Get cookies from Next.js request and forward to GraphQL backend
   const cookieStore = await cookies();
-  // Convert cookies to header string format: "name1=value1; name2=value2"
   const cookieHeader = cookieStore
     .getAll()
     .map((cookie) => `${cookie.name}=${cookie.value}`)
     .join("; ");
   
-  // Create client with cookies forwarded
   const client = getClient(cookieHeader);
 
-  // Verify user is authenticated and is admin
-  // This will handle cookie validation on the backend
   try {
     const meResult = await client.query({
       query: ME_QUERY,
@@ -41,9 +36,18 @@ const AdminPage = async () => {
     });
 
     const user = meResult.data?.me;
+    const errors = meResult.errors;
 
-    // If not authenticated or not admin, redirect to home
-    // Note: redirect() throws NEXT_REDIRECT which is expected behavior in Next.js
+    if (errors && errors.length > 0) {
+      const authError = errors.find(
+        (e: any) => e.extensions?.code === "UNAUTHENTICATED" || e.extensions?.code === "UNAUTHORIZED"
+      );
+      
+      if (authError && !user) {
+        redirect("/");
+      }
+    }
+
     if (!user || user.role !== "ADMIN") {
       redirect("/");
     }
@@ -102,19 +106,14 @@ const AdminPage = async () => {
       </div>
     );
   } catch (error: any) {
-    // Check if it's an authentication error
     const isAuthError = error?.graphQLErrors?.some(
       (e: any) => e.extensions?.code === "UNAUTHENTICATED" || 
                   e.extensions?.code === "UNAUTHORIZED"
     );
 
     if (isAuthError) {
-      // Auth error - redirect to home
       redirect("/");
     } else {
-      // Other errors (network, etc.) - log and redirect
-      // Note: redirect() throws NEXT_REDIRECT which is expected behavior in Next.js
-      // This error may appear in console during development but is handled by Next.js
       console.error("Admin page error:", error);
       redirect("/");
     }

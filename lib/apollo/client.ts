@@ -7,20 +7,12 @@ import {
 } from "@apollo/client";
 import { onError } from "@apollo/client/link/error";
 
-// Error handling link
-const errorLink = onError(({ graphQLErrors, networkError, operation }) => {
+const errorLink = onError(({ graphQLErrors, networkError }) => {
   if (graphQLErrors) {
-    graphQLErrors.forEach(({ message, locations, path, extensions }) => {
+    graphQLErrors.forEach(({ message, path, extensions }) => {
       console.error(
         `[GraphQL error]: Message: ${message}, Path: ${path}, Code: ${extensions?.code}`
       );
-
-      // Handle specific error codes
-      if (extensions?.code === "UNAUTHENTICATED") {
-        // User is not authenticated - cookies may have expired
-        // Frontend should handle this (e.g., redirect to login)
-        console.warn("User is not authenticated");
-      }
     });
   }
 
@@ -29,15 +21,11 @@ const errorLink = onError(({ graphQLErrors, networkError, operation }) => {
   }
 });
 
-// HTTP link - use proxy route for same-domain cookies
-// Proxy route handles forwarding to backend and setting cookies on frontend domain
 const httpLink = new HttpLink({
-  uri: "/api/graphql", // Use proxy route instead of direct backend
-  credentials: "include", // Include cookies automatically
+  uri: "/api/graphql",
+  credentials: "include",
 });
 
-// Create Apollo Client (for client components)
-// Cookies are sent automatically by the browser - no need for Authorization header
 export const createApolloClient = () => {
   return new ApolloClient({
     link: from([errorLink, httpLink]),
@@ -62,17 +50,11 @@ export const createApolloClient = () => {
   });
 };
 
-// Server-side Apollo Client (for Next.js App Router server components)
-// For server-side, we still call backend directly since cookies are already in the request
-// The proxy route is mainly for client-side requests to make cookies same-domain
 export function getClient(cookieHeader?: string) {
-  // Create HTTP link for server-side - call backend directly
-  // Cookies from browser request are forwarded via cookieHeader
   const serverHttpLink = new HttpLink({
     uri: process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/graphql",
     credentials: "include",
     fetch: (uri, options) => {
-      // Forward cookies from Next.js request to backend
       return fetch(uri, {
         ...options,
         headers: {
@@ -83,15 +65,14 @@ export function getClient(cookieHeader?: string) {
     },
   });
 
-  // Create a server-side client
   return new ApolloClient({
     link: from([serverHttpLink]),
     cache: new InMemoryCache(),
-    ssrMode: true, // Enable SSR mode
+    ssrMode: true,
     defaultOptions: {
       query: {
-        fetchPolicy: "no-cache", // Always fetch fresh data on server
-        errorPolicy: "all", // Return both data and errors
+        fetchPolicy: "no-cache",
+        errorPolicy: "all",
       },
     },
   });

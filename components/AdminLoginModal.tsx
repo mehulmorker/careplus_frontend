@@ -33,12 +33,13 @@ interface AdminLoginModalProps {
  *
  * Modal that appears when user clicks "Admin" button on homepage.
  * Allows admin users to login with email and password.
- * After successful login, redirects to admin dashboard.
+ * After successful login, waits for cookies to be set, then redirects to admin dashboard.
  *
  * UX Improvements:
  * - Modal stays open on error (doesn't close)
  * - Clear error messages
  * - Loading state prevents multiple submissions
+ * - Delay before redirect ensures cookies are available for middleware check
  */
 export const AdminLoginModal = ({ onClose }: AdminLoginModalProps) => {
   const router = useRouter();
@@ -76,8 +77,14 @@ export const AdminLoginModal = ({ onClose }: AdminLoginModalProps) => {
       if (result.success && result.user) {
         // Check if user is admin
         if (result.user.role === "ADMIN") {
-          // Success - redirect to admin dashboard (keep loading state during redirect)
+          // Wait for cookies to be set by browser before redirecting
+          // This ensures middleware will see the cookies when checking /admin route
+          // 200ms delay gives browser time to process Set-Cookie headers
+          await new Promise((resolve) => setTimeout(resolve, 200));
+
+          // Redirect to admin dashboard
           router.push("/admin");
+          // Keep loading state - will be cleared when page navigates
         } else {
           // Not an admin user
           setError("Access denied. Admin privileges required.");

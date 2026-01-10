@@ -16,12 +16,9 @@ export function middleware(request: NextRequest) {
     const accessToken = request.cookies.get("accessToken")?.value;
     const refreshToken = request.cookies.get("refreshToken")?.value;
 
-    // If no tokens, redirect to home with admin modal
+    // If no tokens, redirect to home
     if (!accessToken && !refreshToken) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/";
-      url.searchParams.set("admin", "true");
-      return NextResponse.redirect(url);
+      return NextResponse.redirect(new URL("/", request.url));
     }
 
     // Tokens exist - let the request proceed

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 
 import { StatCard } from "@/components/StatCard";
 import { columns } from "@/components/table/columns";
@@ -8,7 +9,6 @@ import { GET_APPOINTMENTS_QUERY } from "@/lib/graphql/queries/appointment.querie
 import { GET_APPOINTMENT_STATS_QUERY } from "@/lib/graphql/queries/admin.queries";
 import { ME_QUERY } from "@/lib/graphql/queries/auth.queries";
 import { getClient } from "@/lib/apollo/client";
-import { getServerToken } from "@/lib/utils/auth.server";
 
 /**
  * Admin Dashboard Page
@@ -21,18 +21,19 @@ import { getServerToken } from "@/lib/utils/auth.server";
  * Requires admin authentication - checks on server-side before rendering.
  */
 const AdminPage = async () => {
-  // Get token from cookies (server-side)
-  const token = await getServerToken();
-
-  // If no token, redirect to home
-  if (!token) {
-    redirect("/");
-  }
-
-  // Create client with token
-  const client = getClient(token);
+  // Get cookies from Next.js request and forward to GraphQL backend
+  const cookieStore = await cookies();
+  // Convert cookies to header string format: "name1=value1; name2=value2"
+  const cookieHeader = cookieStore
+    .getAll()
+    .map((cookie) => `${cookie.name}=${cookie.value}`)
+    .join("; ");
+  
+  // Create client with cookies forwarded
+  const client = getClient(cookieHeader);
 
   // Verify user is authenticated and is admin
+  // This will handle cookie validation on the backend
   try {
     const meResult = await client.query({
       query: ME_QUERY,
@@ -41,7 +42,8 @@ const AdminPage = async () => {
 
     const user = meResult.data?.me;
 
-    // If not authenticated or not admin, redirect
+    // If not authenticated or not admin, redirect to home
+    // Note: redirect() throws NEXT_REDIRECT which is expected behavior in Next.js
     if (!user || user.role !== "ADMIN") {
       redirect("/");
     }
@@ -99,10 +101,23 @@ const AdminPage = async () => {
       </main>
       </div>
     );
-  } catch (error) {
-    // If any error occurs (auth failure, network error, etc.), redirect to login
-    console.error("Admin page error:", error);
-    redirect("/");
+  } catch (error: any) {
+    // Check if it's an authentication error
+    const isAuthError = error?.graphQLErrors?.some(
+      (e: any) => e.extensions?.code === "UNAUTHENTICATED" || 
+                  e.extensions?.code === "UNAUTHORIZED"
+    );
+
+    if (isAuthError) {
+      // Auth error - redirect to home
+      redirect("/");
+    } else {
+      // Other errors (network, etc.) - log and redirect
+      // Note: redirect() throws NEXT_REDIRECT which is expected behavior in Next.js
+      // This error may appear in console during development but is handled by Next.js
+      console.error("Admin page error:", error);
+      redirect("/");
+    }
   }
 };
 

@@ -3,13 +3,12 @@ import { gql } from "@apollo/client";
 /**
  * Register Mutation
  *
- * Creates a new user account and returns authentication token.
+ * Creates a new user account and sets authentication cookies.
  */
 export const REGISTER_MUTATION = gql`
   mutation Register($input: CreateUserInput!) {
     register(input: $input) {
       success
-      token
       user {
         id
         email
@@ -29,13 +28,12 @@ export const REGISTER_MUTATION = gql`
 /**
  * Login Mutation
  *
- * Authenticates user and returns JWT token.
+ * Authenticates user and sets authentication cookies.
  */
 export const LOGIN_MUTATION = gql`
   mutation Login($input: LoginInput!) {
     login(input: $input) {
       success
-      token
       user {
         id
         email
@@ -91,7 +89,6 @@ export interface FieldError {
 
 export interface AuthPayload {
   success: boolean;
-  token?: string;
   user?: AuthUser;
   errors: FieldError[];
 }

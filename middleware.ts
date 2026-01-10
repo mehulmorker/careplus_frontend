@@ -12,18 +12,19 @@ export function middleware(request: NextRequest) {
 
   // Protect admin routes
   if (pathname.startsWith("/admin")) {
-    // Get token from cookie
-    const token = request.cookies.get("carepulse_token")?.value;
+    // Check for authentication cookies
+    const accessToken = request.cookies.get("accessToken")?.value;
+    const refreshToken = request.cookies.get("refreshToken")?.value;
 
-    // If no token, redirect to home with admin modal
-    if (!token) {
+    // If no tokens, redirect to home with admin modal
+    if (!accessToken && !refreshToken) {
       const url = request.nextUrl.clone();
       url.pathname = "/";
       url.searchParams.set("admin", "true");
       return NextResponse.redirect(url);
     }
 
-    // Token exists - let the request proceed
+    // Tokens exist - let the request proceed
     // Server component will verify the token is valid and user is admin
   }
 

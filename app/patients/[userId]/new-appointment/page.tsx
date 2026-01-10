@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { cookies } from "next/headers";
 import { AppointmentForm } from "@/components/forms/AppointmentForm";
 import { GET_PATIENT_BY_USER_ID_QUERY } from "@/lib/graphql/queries/patient.queries";
 import { getClient } from "@/lib/apollo/client";
@@ -15,8 +16,16 @@ const AppointmentPage = async ({
 }) => {
   const { userId } = await params;
 
+  // Get cookies from Next.js request and forward to GraphQL backend
+  const cookieStore = await cookies();
+  // Convert cookies to header string format: "name1=value1; name2=value2"
+  const cookieHeader = cookieStore
+    .getAll()
+    .map((cookie) => `${cookie.name}=${cookie.value}`)
+    .join("; ");
+  
   // Fetch patient data
-  const client = getClient();
+  const client = getClient(cookieHeader);
   const { data } = await client.query({
     query: GET_PATIENT_BY_USER_ID_QUERY,
     variables: { userId },

@@ -17,11 +17,9 @@ const errorLink = onError(({ graphQLErrors, networkError, operation }) => {
 
       // Handle specific error codes
       if (extensions?.code === "UNAUTHENTICATED") {
-        // Redirect to login or clear auth state
-        if (typeof window !== "undefined") {
-          localStorage.removeItem("token");
-          // window.location.href = '/login';
-        }
+        // User is not authenticated - cookies may have expired
+        // Frontend should handle this (e.g., redirect to login)
+        console.warn("User is not authenticated");
       }
     });
   }
@@ -31,36 +29,17 @@ const errorLink = onError(({ graphQLErrors, networkError, operation }) => {
   }
 });
 
-// Token key - same as in useAuth hook
-const TOKEN_KEY = "carepulse_token";
-
-// Auth link to add token to requests
-const authLink = new ApolloLink((operation, forward) => {
-  // Get token from storage
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem(TOKEN_KEY) : null;
-
-  // Add authorization header
-  operation.setContext(({ headers = {} }) => ({
-    headers: {
-      ...headers,
-      ...(token && { authorization: `Bearer ${token}` }),
-    },
-  }));
-
-  return forward(operation);
-});
-
 // HTTP link
 const httpLink = new HttpLink({
   uri: process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/graphql",
-  credentials: "include", // For cookies
+  credentials: "include", // Include cookies automatically
 });
 
 // Create Apollo Client (for client components)
+// Cookies are sent automatically by the browser - no need for Authorization header
 export const createApolloClient = () => {
   return new ApolloClient({
-    link: from([errorLink, authLink, httpLink]),
+    link: from([errorLink, httpLink]),
     cache: new InMemoryCache({
       typePolicies: {
         Query: {
@@ -83,31 +62,27 @@ export const createApolloClient = () => {
 };
 
 // Server-side Apollo Client (for Next.js App Router server components)
-// This creates a new client instance for each request with auth token support
-export function getClient(token?: string | null) {
-  // Create auth link for server-side requests
-  const serverAuthLink = new ApolloLink((operation, forward) => {
-    // Add authorization header if token is provided
-    operation.setContext(({ headers = {} }) => ({
-      headers: {
-        ...headers,
-        ...(token && { authorization: `Bearer ${token}` }),
-      },
-    }));
-
-    return forward(operation);
-  });
-
-  // Create HTTP link for server-side
+// Cookies must be explicitly forwarded from Next.js request
+export function getClient(cookieHeader?: string) {
+  // Create HTTP link for server-side with cookie forwarding
   const serverHttpLink = new HttpLink({
     uri: process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/graphql",
     credentials: "include",
-    fetch: fetch, // Use native fetch
+    fetch: (uri, options) => {
+      // Forward cookies from Next.js request to GraphQL backend
+      return fetch(uri, {
+        ...options,
+        headers: {
+          ...options?.headers,
+          ...(cookieHeader && { Cookie: cookieHeader }),
+        },
+      });
+    },
   });
 
-  // Create a server-side client with auth support
+  // Create a server-side client
   return new ApolloClient({
-    link: from([serverAuthLink, serverHttpLink]),
+    link: from([serverHttpLink]),
     cache: new InMemoryCache(),
     ssrMode: true, // Enable SSR mode
     defaultOptions: {

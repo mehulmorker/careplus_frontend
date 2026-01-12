@@ -50,8 +50,8 @@ export const AdminLoginModal = ({ onClose }: AdminLoginModalProps) => {
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(LoginFormValidation),
     defaultValues: {
-      email: "",
-      password: "",
+      email: "admin@careplus.com",
+      password: "Careplus123!",
     },
   });
 
@@ -143,7 +143,7 @@ export const AdminLoginModal = ({ onClose }: AdminLoginModalProps) => {
               control={form.control}
               name="email"
               label="Email"
-              placeholder="admin@carepulse.com"
+              placeholder="admin@careplus.com"
               disabled={isLoading}
             />
 
